@@ -8,7 +8,7 @@
   <!-- (Italian: CSS di Bootstrap 5, gratis e open source) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
-    /* Global Styles / Stili Globali */
+    /* Global Styles / Stili globali */
     body {
       margin: 0;
       padding: 0;
@@ -45,8 +45,8 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
     }
-    /* Card Styles for Artist / Schede per Artisti */
-    .artist-card {
+    /* Card Styles for Artist & Song / Schede per Artisti e Canzoni */
+    .card-item {
       cursor: pointer;
       padding: 15px;
       border: 1px solid #dee2e6;
@@ -55,20 +55,7 @@
       text-align: center;
       transition: background-color 0.3s;
     }
-    .artist-card:hover {
-      background-color: #e9ecef;
-    }
-    /* Card Styles for Song / Schede per Canzoni */
-    .song-card {
-      cursor: pointer;
-      padding: 15px;
-      border: 1px solid #dee2e6;
-      border-radius: 5px;
-      background-color: #fff;
-      text-align: center;
-      transition: background-color 0.3s;
-    }
-    .song-card:hover {
+    .card-item:hover {
       background-color: #e9ecef;
     }
     /* Pagination Styles / Stili per la Paginazione */
@@ -103,7 +90,7 @@
     <nav id="paginationNav" class="container"></nav>
   </div>
   
-  <!-- Fullscreen Modal for Lyrics / Modal a Schermo Intero per i Testi -->
+  <!-- Fullscreen Modal for Lyrics / Modal a schermo intero per i testi -->
   <div class="modal fade" id="lyricsModal" tabindex="-1" aria-labelledby="lyricsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen modal-dialog-centered">
       <div class="modal-content">
@@ -118,45 +105,52 @@
     </div>
   </div>
   
-  <!-- Bootstrap Bundle JS (includes Popper) / Script di Bootstrap (incluso Popper.js) -->
+  <!-- Bootstrap Bundle JS (includes Popper.js) / Script di Bootstrap (incluso Popper.js) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   
   <!-- Main JavaScript / Script Principale -->
   <script>
     /***********************
-     * Global Variables & State / Variabili Globali e Stato
+     * Global Variables & State
+     * (Italiano: Variabili Globali e Stato)
      ***********************/
-    let currentArtists = [];   // List of artists returned from MusicBrainz
+    let currentArtists = [];   // Artists from MusicBrainz
     let currentPage = 1;
-    const pageSize = 20;       // 20 artists per page for artist list
+    const pageSize = 20;       // 20 artists per page
     
-    // Free CORS proxy to work around MusicBrainz CORS restrictions.
+    let currentSongs = [];     // Recordings for a given artist
+    let currentSongPage = 1;
+    const songPageSize = 20;   // 20 songs per page
+    let currentArtistName = ""; // Name of the currently selected artist
+    
+    // Free CORS proxy to bypass MusicBrainz CORS restrictions
     const MB_CORS_PROXY = "https://thingproxy.freeboard.io/fetch/";
     
     /***********************
-     * Render Alphabet Menu / Visualizza il Menu Alfabetico
+     * Render Alphabet Menu
+     * (Italiano: Visualizza il Menu Alfabetico)
      ***********************/
     function renderAlphabetMenu() {
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
       const menuDiv = document.getElementById("alphabetMenu");
       let html = "";
       alphabet.forEach(letter => {
+        // The filtering and ordering consider only the first letter
         html += `<button class="btn btn-outline-primary btn-sm" onclick="fetchArtistsByLetter('${letter}')">${letter}</button>`;
       });
       menuDiv.innerHTML = html;
     }
     
     /***********************
-     * Fetch Artists Dynamically from MusicBrainz by Starting Letter
-     * (Italiano: Recupera artisti dinamicamente da MusicBrainz filtrando per lettera iniziale)
+     * Fetch Artists by Letter from MusicBrainz
+     * (Italiano: Recupera artisti da MusicBrainz in base alla lettera iniziale)
      ***********************/
     async function fetchArtistsByLetter(letter) {
-      // Clear previous content and set back button for alphabet view
+      // Clear previous content and set "Back to Alphabet" button
       document.getElementById("backButtonArea").innerHTML = `<button class="btn btn-secondary mb-3" onclick="init()">Back to Alphabet</button>`;
       document.getElementById("mainContent").innerHTML = "<p>Loading artists...</p>";
       document.getElementById("paginationNav").innerHTML = "";
       try {
-        // MusicBrainz API URL with CORS proxy; limit to 50 results.
         const url = MB_CORS_PROXY + `https://musicbrainz.org/ws/2/artist/?query=artist:${letter}*&fmt=json&limit=50`;
         const response = await fetch(url);
         const data = await response.json();
@@ -164,8 +158,9 @@
           document.getElementById("mainContent").innerHTML = "<p>No artists found for this letter.</p>";
           return;
         }
-        // Set global list of artists (filter for valid names) and sort alphabetically
-        currentArtists = data.artists.filter(artist => artist.name).sort((a, b) => a.name.localeCompare(b.name));
+        // Filter and sort artists based solely on the first letter (group is implicit)
+        currentArtists = data.artists.filter(artist => artist.name)
+          .sort((a, b) => a.name.localeCompare(b.name));
         currentPage = 1;
         renderPaginatedArtists();
       } catch (error) {
@@ -175,7 +170,8 @@
     }
     
     /***********************
-     * Render Artist List with Pagination / Visualizza la Lista degli Artisti con Paginazione
+     * Render Paginated Artist List
+     * (Italiano: Visualizza la lista degli artisti con paginazione)
      ***********************/
     function renderPaginatedArtists() {
       const start = (currentPage - 1) * pageSize;
@@ -184,7 +180,7 @@
       let html = `<h2 class="section-title">Artists</h2>`;
       html += `<div class="grid-container">`;
       pageArtists.forEach(artist => {
-        html += `<div class="card-item artist-card" onclick="fetchSongs('${artist.id}', '${artist.name}')">
+        html += `<div class="card-item artist-card" onclick="fetchSongs('${artist.id}', '${artist.name.replace(/'/g, "\\'")}')">
                    <h5>${artist.name}</h5>
                  </div>`;
       });
@@ -194,8 +190,8 @@
     }
     
     /***********************
-     * Render Pagination Controls for Artist List
-     * (Italiano: Visualizza i Controlli di Paginazione per Artisti)
+     * Render Artist Pagination Controls
+     * (Italiano: Visualizza la paginazione per la lista degli artisti)
      ***********************/
     function renderArtistPagination() {
       const totalPages = Math.ceil(currentArtists.length / pageSize);
@@ -205,17 +201,14 @@
         return;
       }
       let paginationHTML = '<ul class="pagination justify-content-center">';
-      // Previous button
       paginationHTML += `<li class="page-item ${currentPage === 1 ? "disabled" : ""}">
                            <button class="page-link" onclick="changeArtistPage(currentPage - 1)">Previous</button>
                          </li>`;
-      // Page numbers
       for (let i = 1; i <= totalPages; i++) {
         paginationHTML += `<li class="page-item ${currentPage === i ? "active" : ""}">
                              <button class="page-link" onclick="changeArtistPage(${i})">${i}</button>
                            </li>`;
       }
-      // Next button
       paginationHTML += `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
                            <button class="page-link" onclick="changeArtistPage(currentPage + 1)">Next</button>
                          </li>`;
@@ -224,7 +217,8 @@
     }
     
     /***********************
-     * Change Artist Page / Cambia Pagina degli Artisti
+     * Change Artist Page
+     * (Italiano: Cambia pagina degli artisti)
      ***********************/
     function changeArtistPage(page) {
       const totalPages = Math.ceil(currentArtists.length / pageSize);
@@ -234,16 +228,18 @@
     }
     
     /***********************
-     * Fetch Songs for an Artist from MusicBrainz / Recupera le canzoni per un artista da MusicBrainz
+     * Fetch Songs for an Artist from MusicBrainz
+     * (Italiano: Recupera le canzoni per un artista da MusicBrainz)
      * We query recordings by artist MBID.
      ***********************/
     async function fetchSongs(artistId, artistName) {
+      // Set global artist name for song pagination
+      currentArtistName = artistName;
       // Add a Back button to return to artist list
       document.getElementById("backButtonArea").innerHTML = `<button class="btn btn-secondary mb-3" onclick="renderPaginatedArtists()">Back to Artists</button>`;
       document.getElementById("mainContent").innerHTML = "<p>Loading songs...</p>";
       document.getElementById("paginationNav").innerHTML = "";
       try {
-        // MusicBrainz API for recordings with CORS proxy.
         const url = MB_CORS_PROXY + `https://musicbrainz.org/ws/2/recording?artist=${artistId}&fmt=json&limit=100`;
         const response = await fetch(url);
         const data = await response.json();
@@ -251,9 +247,23 @@
           document.getElementById("mainContent").innerHTML = "<p>No songs found for this artist.</p>";
           return;
         }
-        // Sort recordings alphabetically by title
-        let recordings = data.recordings.filter(rec => rec.title).sort((a, b) => a.title.localeCompare(b.title));
-        renderSongList(artistName, recordings);
+        // Filter out duplicates by title (case-insensitive)
+        let recordings = data.recordings.filter(rec => rec.title);
+        const uniqueRecordings = [];
+        const seenTitles = new Set();
+        recordings.forEach(rec => {
+          const titleKey = rec.title.trim().toLowerCase();
+          if (!seenTitles.has(titleKey)) {
+            seenTitles.add(titleKey);
+            uniqueRecordings.push(rec);
+          }
+        });
+        // Sort by title alphabetically
+        uniqueRecordings.sort((a, b) => a.title.localeCompare(b.title));
+        // Set global songs and initialize pagination variables
+        currentSongs = uniqueRecordings;
+        currentSongPage = 1;
+        renderPaginatedSongs(currentArtistName);
       } catch (error) {
         console.error(error);
         document.getElementById("mainContent").innerHTML = "<p>Error retrieving songs. Please try again later.</p>";
@@ -261,24 +271,66 @@
     }
     
     /***********************
-     * Render Song List for an Artist / Visualizza la Lista delle Canzoni per un Artista
+     * Render Paginated Song List for an Artist
+     * (Italiano: Visualizza la lista delle canzoni per un artista con paginazione)
      ***********************/
-    function renderSongList(artistName, recordings) {
-      // Add a back button to return to artist list
-      document.getElementById("backButtonArea").innerHTML = `<button class="btn btn-secondary mb-3" onclick="renderPaginatedArtists()">Back to Artists</button>`;
+    function renderPaginatedSongs(artistName) {
+      const start = (currentSongPage - 1) * songPageSize;
+      const end = start + songPageSize;
+      const pageSongs = currentSongs.slice(start, end);
       let html = `<h2 class="section-title">Songs by ${artistName}</h2>`;
       html += `<div class="grid-container">`;
-      recordings.forEach(recording => {
-        html += `<div class="card-item song-card" onclick="fetchLyrics('${artistName}', '${recording.title.replace(/'/g, "\\'")}')">
-                   <h5>${recording.title}</h5>
+      pageSongs.forEach(song => {
+        html += `<div class="card-item song-card" onclick="fetchLyrics('${artistName}', '${song.title.replace(/'/g, "\\'")}')">
+                   <h5>${song.title}</h5>
                  </div>`;
       });
       html += "</div>";
       document.getElementById("mainContent").innerHTML = html;
+      renderSongPagination();
     }
     
     /***********************
-     * Fetch Lyrics for a Song and Display in Modal / Recupera i testi della canzone e visualizzali nel modal
+     * Render Pagination Controls for Song List
+     * (Italiano: Visualizza la paginazione per la lista delle canzoni)
+     ***********************/
+    function renderSongPagination() {
+      const totalPages = Math.ceil(currentSongs.length / songPageSize);
+      const paginationDiv = document.getElementById("paginationNav");
+      if (totalPages <= 1) {
+        paginationDiv.innerHTML = "";
+        return;
+      }
+      let paginationHTML = '<ul class="pagination justify-content-center">';
+      paginationHTML += `<li class="page-item ${currentSongPage === 1 ? "disabled" : ""}">
+                           <button class="page-link" onclick="changeSongPage(currentSongPage - 1)">Previous</button>
+                         </li>`;
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHTML += `<li class="page-item ${currentSongPage === i ? "active" : ""}">
+                             <button class="page-link" onclick="changeSongPage(${i})">${i}</button>
+                           </li>`;
+      }
+      paginationHTML += `<li class="page-item ${currentSongPage === totalPages ? "disabled" : ""}">
+                           <button class="page-link" onclick="changeSongPage(currentSongPage + 1)">Next</button>
+                         </li>`;
+      paginationHTML += "</ul>";
+      paginationDiv.innerHTML = paginationHTML;
+    }
+    
+    /***********************
+     * Change Song Page
+     * (Italiano: Cambia pagina della lista delle canzoni)
+     ***********************/
+    function changeSongPage(page) {
+      const totalPages = Math.ceil(currentSongs.length / songPageSize);
+      if (page < 1 || page > totalPages) return;
+      currentSongPage = page;
+      renderPaginatedSongs(currentArtistName);
+    }
+    
+    /***********************
+     * Fetch Lyrics for a Song and Display in Modal
+     * (Italiano: Recupera i testi della canzone e visualizzali nel modal)
      ***********************/
     async function fetchLyrics(artist, song) {
       const modalLyricsContent = document.getElementById("modalLyricsContent");
@@ -290,7 +342,7 @@
           throw new Error("Lyrics not found");
         }
         const data = await response.json();
-        if (data.lyrics) {
+        if (data.lyrics && data.lyrics.trim().length > 0) {
           modalLyricsContent.innerHTML = `<pre>${data.lyrics}</pre>`;
         } else {
           modalLyricsContent.innerHTML = `<p class="text-danger">No lyrics found for "${song}".</p>`;
@@ -305,7 +357,8 @@
     }
     
     /***********************
-     * Utility: Clear Main Content and Navigation / Utility per pulire il contenuto principale e la navigazione
+     * Utility: Clear Main Content and Navigation
+     * (Italiano: Utility per pulire il contenuto principale e la navigazione)
      ***********************/
     function clearMainContent() {
       document.getElementById("mainContent").innerHTML = "";
@@ -314,14 +367,15 @@
     }
     
     /***********************
-     * Initialize Application / Inizializza l'App
+     * Initialize Application
+     * (Italiano: Inizializza l'app)
      ***********************/
     function init() {
       renderAlphabetMenu();
       clearMainContent();
     }
     
-    // Initialize the app on page load / Inizializza l'app all'avvio della pagina
+    // Initialize the app on page load
     window.onload = init;
   </script>
 </body>
