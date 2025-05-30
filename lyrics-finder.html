@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lyrics Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 5 CSS (Free & Open Source) -->
+  <!-- (Italian: CSS di Bootstrap 5, gratis e open source) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Global Styles / Stili globali */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      color: #212529;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 15px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    /* Form Styles / Stili del modulo */
+    .form-control {
+      margin-bottom: 15px;
+    }
+    /* Lyrics Display Styles / Stili per la visualizzazione dei testi */
+    #lyricsResult {
+      white-space: pre-wrap;  /* Preserve newlines */
+      background-color: #fff;
+      padding: 20px;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      min-height: 200px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header / Intestazione -->
+    <header>
+      <h1>Lyrics Finder</h1>
+      <p>Fetch song lyrics based on artist and title using the free lyrics.ovh API.</p>
+      <!-- (Italian: Recupera i testi delle canzoni in base all'artista e al titolo usando l'API gratuita lyrics.ovh) -->
+    </header>
+    
+    <!-- Search Form / Modulo di Ricerca -->
+    <div class="mb-3">
+      <input type="text" id="artistInput" class="form-control" placeholder="Enter artist name" />
+      <!-- (Italian: Inserisci il nome dell'artista) -->
+    </div>
+    <div class="mb-3">
+      <input type="text" id="titleInput" class="form-control" placeholder="Enter song title" />
+      <!-- (Italian: Inserisci il titolo della canzone) -->
+    </div>
+    <div class="mb-3">
+      <button id="btnGetLyrics" class="btn btn-primary w-100">Get Lyrics</button>
+      <!-- (Italian: Premi per ottenere i testi) -->
+    </div>
+    
+    <!-- Lyrics Result Area / Area di Visualizzazione dei Testi -->
+    <div id="lyricsResult"></div>
+  </div>
+  
+  <!-- Bootstrap Bundle JS (includes Popper.js) / Script di Bootstrap (incluso Popper.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Main JavaScript / Script Principale -->
+  <script>
+    // Event listener for "Get Lyrics" button
+    // (Italiano: Gestione del pulsante "Get Lyrics")
+    document.getElementById("btnGetLyrics").addEventListener("click", async function() {
+      // Retrieve input values / Ottieni i valori degli input
+      const artist = document.getElementById("artistInput").value.trim();
+      const title = document.getElementById("titleInput").value.trim();
+      const resultDiv = document.getElementById("lyricsResult");
+
+      // Validate inputs / Controlla che i campi siano compilati
+      if (!artist || !title) {
+        resultDiv.innerHTML = "<p class='text-danger'>Please enter both artist name and song title.</p>";
+        return;
+      }
+
+      // Show a loading message / Mostra un messaggio di caricamento
+      resultDiv.innerHTML = "<p>Loading lyrics...</p>";
+
+      try {
+        // Call the lyrics.ovh API / Chiamata all'API di lyrics.ovh
+        const url = "https://api.lyrics.ovh/v1/" + encodeURIComponent(artist) + "/" + encodeURIComponent(title);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("Lyrics not found");
+        }
+        const data = await response.json();
+        // If lyrics found, display them / Se i testi sono disponibili, visualizzali
+        if (data.lyrics) {
+          resultDiv.innerHTML = "<pre>" + data.lyrics + "</pre>";
+        } else {
+          resultDiv.innerHTML = "<p class='text-danger'>No lyrics found for this song.</p>";
+        }
+      } catch (error) {
+        console.error(error);
+        resultDiv.innerHTML = "<p class='text-danger'>Error retrieving lyrics. Please try again later.</p>";
+      }
+    });
+  </script>
+</body>
+</html>
